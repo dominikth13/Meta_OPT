@@ -198,9 +198,9 @@ def selection(popRanked, eliteSize):
     for i in range(0, eliteSize):
         selectionResults.append(popRanked[i][0])
 
-    # Decide randomly which strategy to use
-    #if bool(random.getrandbits(1)):
-    #    return tournament(popRanked, eliteSize, selectionResults)
+    # Decide here which selection strategy to use
+    if True:
+        return tournament(popRanked, eliteSize, selectionResults)
 
     # roulette wheel by calculating a relative fitness weight for each individual
     df = pd.DataFrame(np.array(popRanked), columns=["Index","Fitness"])
@@ -216,7 +216,6 @@ def selection(popRanked, eliteSize):
                 break
     return selectionResults
 
-#TODO tournament anpassen
 def selectionWithArchive(popRanked):
     selectionResults = []
     #here wie hold all non-dominated solutions
@@ -224,9 +223,9 @@ def selectionWithArchive(popRanked):
         if (popRanked[i][1] > 1):
             selectionResults.append(popRanked[i][0])
 
-    # Decide randomly which strategy to use
-    if bool(random.getrandbits(1)):
-        return tournament(popRanked, eliteSize, selectionResults)
+    # Decide here which selection strategy to use
+    if False:
+        return tournamentWithArchive(popRanked, selectionResults)
 
     # roulette wheel by calculating a relative fitness weight for each individual
     df = pd.DataFrame(np.array(popRanked), columns=["Index","Fitness"])
@@ -245,33 +244,11 @@ def selectionWithArchive(popRanked):
                 break
     return selectionResults
 
-#tournament based selection
-def tournament(popRanked, eliteSize, selectionResults):
-    #Create a list of remaining indices in popRanked
-    indices = list(range(eliteSize, len(popRanked)))
+def tournamentWithArchive(popRanked, selectionResults):
+    indices = list(range(0, len(popRanked)))
 
-    for i in range(0, len(popRanked) - eliteSize):
-        if len(indices) == 1:
-            selectionResults.append(popRanked[indices[0]][0])
-            continue
-
-        # in a tournament there will be m - 1 matches
-        # if m is too big each tournament will last too long
-        # if m is too small the tournament might not represent
-        # the fitness in the population correctly
-        # we select 2^(n-2) participants, when the
-        # number of possible participants m >= 2^(n)
-        # from n < 6, it will be 2^(n-1)
-        exp = 0
-        while len(indices) >= 2**(exp + 1):
-            exp += 1
-
-        participants = 2
-        if exp < 6:
-            participants **= (exp - 1)
-        else:
-            participants **= (exp - 2)
-
+    for i in range(0, len(popRanked) - len(selectionResults)):
+        participants = 16
         randomParticipants = random.sample(indices, participants)
         while len(randomParticipants) > 1:
             winners = []
@@ -285,12 +262,31 @@ def tournament(popRanked, eliteSize, selectionResults):
                 else:
                     winners.append(second)
             randomParticipants = winners
-
         winner = randomParticipants[0]
-        # Add the winner to the selection and remove it from the pool
-        # of participants
-        selectionResults.append(popRanked[winner][0])
-        indices.remove(winner)
+        selectionResults.append(winner)
+    return selectionResults
+
+#tournament based selection
+def tournament(popRanked, eliteSize, selectionResults):
+    indices = list(range(0, len(popRanked)))
+
+    for i in range(0, len(popRanked) - eliteSize):
+        participants = 16
+        randomParticipants = random.sample(indices, participants)
+        while len(randomParticipants) > 1:
+            winners = []
+            # Only count each first to let participants
+            # fight in this format: (1,2), (3,4), (5,6)...
+            for i in range(0, len(randomParticipants), 2):
+                first = randomParticipants[i]
+                second = randomParticipants[i+1]
+                if popRanked[first][1] >= popRanked[second][1]:
+                    winners.append(first)
+                else:
+                    winners.append(second)
+            randomParticipants = winners
+        winner = randomParticipants[0]
+        selectionResults.append(winner)
     return selectionResults
 
 #Create mating pool
@@ -467,7 +463,7 @@ def geneticAlgorithm(objectiveNrUsed, specialInitialSolutions, population, popSi
         print("Initial highest fitness value: " + str(rankRoutes(pop,objectiveNrUsed)[0][1]))
         print("Initial best distance value: " + str(1/ rankRoutes(pop,1)[0][1]))
         print("Initial best stress value: " + str(1/ rankRoutes(pop,2)[0][1]))
-        archiveUsed = False
+        archiveUsed = True
     
     #plot intial population with regard to the two objectives
     plotPopulationAndObjectiveValues(pop, "Initial Population")
@@ -607,6 +603,18 @@ def distance(city1, city2):
 
 initCitiesStats()
 
+withInitialSolutions = False
+withInitialSolutionsValid = False
+while not withInitialSolutionsValid:
+    withInitialSolutionsIn = input('Should initial solutions be used? (1 -> True, 0 -> False): (default 0) ')
+    if withInitialSolutionsIn == '':
+        withInitialSolutionsValid = True
+    elif withInitialSolutionsIn in {'0', '1'}:
+        withInitialSolutions = int(withInitialSolutionsIn)
+        withInitialSolutionsValid = True
+    else:
+        print('This value is not allowed.')
+
 #Input the parameters for the algorithm
 objectiveNr = 3 
 objectiveInValid = False
@@ -679,12 +687,13 @@ else:
     csvName = 'initial_solutions.csv'
 csvPath = f'../data/{csvName}'
 
-#Load intial solutions from the csv
-with open(csvPath) as initialSolutions:
-    csvReader = csv.reader(initialSolutions, delimiter=',')
-    lineCount = 0
-    for row in csvReader:
-        initialSolutionsList.append(list(map(lambda cNr: int(cNr), row)))
+if withInitialSolutions:
+    #Load intial solutions from the csv
+    with open(csvPath) as initialSolutions:
+        csvReader = csv.reader(initialSolutions, delimiter=',')
+        lineCount = 0
+        for row in csvReader:
+            initialSolutionsList.append(list(map(lambda cNr: int(cNr), row)))
 
 #Run the genetic algorithm
 #modify parameters popSize, eliteSize, mutationRate, generations to search for the best solution
@@ -693,10 +702,11 @@ with open(csvPath) as initialSolutions:
 bestRoute, timeUsed = geneticAlgorithm(objectiveNrUsed=objectiveNr, specialInitialSolutions = initialSolutionsList, population=cityList,
                              popSize=popSize, eliteSize=eliteSize, mutationRate=mutationRate, generations=generationSize)
 
-#Write the new solution to the csv
-with open(csvPath, 'a', newline='', encoding='utf-8') as initialSolutions:
-    csvWriter = csv.writer(initialSolutions, delimiter=",")
-    csvWriter.writerow(map(lambda city: city.nr, bestRoute))
+if withInitialSolutions:
+    #Write the new solution to the csv
+    with open(csvPath, 'a', newline='', encoding='utf-8') as initialSolutions:
+        csvWriter = csv.writer(initialSolutions, delimiter=",")
+        csvWriter.writerow(map(lambda city: city.nr, bestRoute))
 
 print(bestRoute)
 print(f'Time used: {timeUsed}')

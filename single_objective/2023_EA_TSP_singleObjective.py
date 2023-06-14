@@ -8,7 +8,10 @@ Modified version of https://github.com/ezstoltz/genetic-algorithm/blob/master/ge
 Modified for multicriteria TSP
 """
 
-
+"""
+This file is depricated. All relvant functions for the single objective optimization are equally
+implemented into the 2023_EA_TSP_multiObjective.py as well.
+"""
 
 import numpy as np, random, operator, pandas as pd, matplotlib.pyplot as plt
 import datetime
