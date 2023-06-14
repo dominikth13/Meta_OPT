@@ -8,7 +8,10 @@ Modified version of https://github.com/ezstoltz/genetic-algorithm/blob/master/ge
 Modified for multicriteria TSP
 """
 
-
+"""
+This file is depricated. All relvant functions for the single objective optimization are equally
+implemented into the 2023_EA_TSP_multiObjective.py as well.
+"""
 
 import numpy as np, random, operator, pandas as pd, matplotlib.pyplot as plt
 import datetime
@@ -483,7 +486,7 @@ while not eliteSizeValid:
     else:
         print('This value is not allowed.')
 
-mutationRate = 20
+mutationRate = 0.01
 mutationRateValid = False
 while not mutationRateValid:
     mutationRateIn = input('Please enter the mutation rate (float between 0 and 1): (default 0.01) ')
@@ -516,8 +519,10 @@ if objectiveNr == 1:
 else:
     csv_name = 'initial_solutions_stress.csv'
 
+csv_path = f'../data/{csv_name}'
+
 #Load intial solutions from the csv
-with open(csv_name) as csv_file:
+with open(csv_path) as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     line_count = 0
     for row in csv_reader:
@@ -533,7 +538,7 @@ print(bestRoute)
 print(timeUsed)
 
 #Write the new solution to the csv
-with open(csv_name, 'a', newline='', encoding='utf-8') as csv_file:
+with open(csv_path, 'a', newline='', encoding='utf-8') as csv_file:
     csv_writer = csv.writer(csv_file, delimiter=",")
     csv_writer.writerow(map(lambda city: city.nr, bestRoute))
 
